@@ -63,3 +63,28 @@ def client(db):
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+
+
+# ---------------------------------------------------------------- shared test users
+PASSWORD = "Correct1Horse"
+
+
+def _signup(client, email):
+    r = client.post("/api/v1/auth/register",
+                    json={"full_name": "Test User", "email": email, "password": PASSWORD})
+    assert r.status_code == 201, r.text
+    r = client.post("/api/v1/auth/login", json={"email": email, "password": PASSWORD})
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+@pytest.fixture
+def alice(client):
+    """Auth headers for a registered user."""
+    return _signup(client, "alice@example.com")
+
+
+@pytest.fixture
+def bob(client):
+    """Auth headers for a second user, used to prove users can't see each other's data."""
+    return _signup(client, "bob@example.com")
