@@ -88,3 +88,12 @@ def alice(client):
 def bob(client):
     """Auth headers for a second user, used to prove users can't see each other's data."""
     return _signup(client, "bob@example.com")
+
+# ---------------------------------------------------------------- speed
+@pytest.fixture(autouse=True)
+def fast_bcrypt():
+    """Cheap password hashing in tests only (production stays at 12)."""
+    original = settings.BCRYPT_ROUNDS
+    settings.BCRYPT_ROUNDS = 4
+    yield
+    settings.BCRYPT_ROUNDS = original

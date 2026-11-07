@@ -131,7 +131,8 @@ def _like_pattern(q: str) -> str:
 # --------------------------------------------------------------------------
 # Create / read
 # --------------------------------------------------------------------------
-def create_subscription(db: Session, user: User, plan: Plan, data: SubscriptionCreate) -> Subscription:
+def create_subscription(db: Session, user: User, plan: Plan, data: SubscriptionCreate, *,
+                        source: str = "manual", commit: bool = True, price_effective_date=None) -> Subscription:
     _check_plan_limit(db, user, plan)
 
     values = data.model_dump(exclude={"tag_ids", "acknowledge_duplicate"})
@@ -147,7 +148,7 @@ def create_subscription(db: Session, user: User, plan: Plan, data: SubscriptionC
     today = _today(user)
     sub = Subscription(
         user_id=user.id,
-        source="manual",
+        source=source,
         merchant_id=_match_merchant(db, data.name, data.merchant),
         last_confirmed_active_at=_now(),
         **values,
@@ -160,11 +161,15 @@ def create_subscription(db: Session, user: User, plan: Plan, data: SubscriptionC
     # The first price on record, so history always starts with the price the user entered
     db.add(PriceHistory(
         subscription_id=sub.id, amount=sub.amount, previous_amount=None, currency=sub.currency,
-        effective_date=sub.start_date or today, source="manual",
+        effective_date=price_effective_date or sub.start_date or today,
+        source="manual" if source == "manual" else "import",
     ))
     log_event(db, user.id, "subscription", sub.id, "create", new=_snapshot(sub))
-    db.commit()
-    db.refresh(sub)
+    if commit:
+        db.commit()
+        db.refresh(sub)
+    else:
+        db.flush()  # the caller commits, so a batch is all-or-nothing
     return sub
 
 
@@ -345,3 +350,11 @@ def list_payments(db: Session, user: User, subscription_id) -> list[PaymentRecor
         select(PaymentRecord).where(PaymentRecord.subscription_id == sub.id)
         .order_by(PaymentRecord.payment_date.desc(), PaymentRecord.created_at.desc())
     ))
+
+
+# Public names for other services (the import service uses these)
+def find_similar_ids(db: Session, user: User, name: str, merchant: str | None = None) -> list:
+    return _find_similar(db, user, name, merchant)
+
+
+snapshot_subscription = _snapshot
