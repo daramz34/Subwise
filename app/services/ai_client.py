@@ -87,8 +87,42 @@ def call_ai_extraction(*, text: str | None = None, file_bytes: bytes | None = No
         raise
     except (ValueError, KeyError, TypeError, AttributeError):
         raise AIError("The AI service returned an unexpected response.")
+def call_ai_text(*, system: str, user_text: str, max_tokens: int = 2048) -> str:
+    """Plain text-in, JSON-text-out call used for grounded Q&A. Never logs the key or the content."""
+    if not settings.AI_API_KEY:
+        raise AIError("AI isn't configured on this server.")
+    body = {
+        "system_instruction": {"parts": [{"text": system}]},
+        "contents": [{"role": "user", "parts": [{"text": user_text}]}],
+        "generationConfig": {"responseMimeType": "application/json", "temperature": 0.2,
+                             "maxOutputTokens": max_tokens},
+    }
+    headers = {"x-goog-api-key": settings.AI_API_KEY, "content-type": "application/json"}
+    url = f"{settings.AI_API_URL.rstrip('/')}/{settings.AI_MODEL}:generateContent"
+    try:
+        response = httpx.post(url, headers=headers, json=body, timeout=settings.AI_TIMEOUT_SECONDS)
+    except httpx.TimeoutException:
+        raise AIError("The AI service took too long to respond. Please try again.")
+    except httpx.HTTPError:
+        raise AIError("Couldn't reach the AI service. Please try again.")
+    if response.status_code == 429:
+        raise AIError("The AI service is busy right now. Please try again in a minute.")
+    if response.status_code != 200:
+        logger.warning("AI request failed with status %s", response.status_code)
+        raise AIError("The AI service couldn't answer right now. Please try again later.")
+    try:
+        candidates = response.json().get("candidates") or []
+        if not candidates:
+            raise AIError("The AI couldn't answer that. Try rephrasing.")
+        parts = candidates[0].get("content", {}).get("parts", [])
+        return "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+    except AIError:
+        raise
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise AIError("The AI service returned an unexpected response.")
 _INTERVAL_WORDS = {"daily": "day", "weekly": "week", "monthly": "month", "yearly": "year",
                    "annual": "year", "annually": "year"}
+
 def _tidy(item):
     """Fix harmless wording differences before strict validation."""
     if isinstance(item, dict):
