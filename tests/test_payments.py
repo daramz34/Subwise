@@ -3,9 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
-
+from datetime import datetime, timedelta, timezone
 from app.core.config import settings
-from app.models import PayPalWebhookEvent  # NAMES
+from app.models import PayPalWebhookEvent, User, UserEntitlement  # NAMES
 from app.services import paypal_client
 
 P = "/api/v1/payments"
@@ -181,3 +181,33 @@ def test_payment_endpoints_require_login(client):
     assert client.post(f"{P}/capture-order", json={"order_id": "ORDER1"}).status_code == 401
     assert client.get(f"{P}/entitlement").status_code == 401
     assert client.get(f"{P}/orders").status_code == 401
+
+
+def _expire(db, email):
+    user = db.scalar(select(User).where(User.email == email))
+    ent = db.scalar(select(UserEntitlement).where(UserEntitlement.user_id == user.id))
+    ent.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    db.flush()
+
+
+def test_expired_plus_falls_back_to_free_and_can_be_bought_again(client, alice, paypal, db):
+    _buy(client, alice)
+    assert _plan(client, alice) == "plus"
+    _expire(db, "alice@example.com")
+    assert _plan(client, alice) == "free"
+    for i in range(5):
+        assert _add_sub(client, alice, i).status_code == 201
+    assert _add_sub(client, alice, 5).status_code == 403     # the free limit applies again
+    _buy(client, alice)                                      # renewing works
+    assert _plan(client, alice) == "plus"
+    assert _add_sub(client, alice, 5).status_code == 201
+
+
+def test_denied_payment_webhook_revokes_plus(client, alice, paypal):
+    oid = _buy(client, alice)
+    assert _plan(client, alice) == "plus"
+    assert _webhook(client, _event("PAYMENT.CAPTURE.DENIED", oid, "EVT-D")).status_code == 200
+    assert _plan(client, alice) == "free"
+    assert client.get(f"{P}/orders", headers=alice).json()[0]["status"] == "failed"
+
+    
