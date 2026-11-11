@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     PAYPAL_CANCEL_URL: str = "http://localhost:8000/?paypal=cancel"
 
     # Used only by tests. The database name MUST contain the word 'test'.
-    #TEST_DATABASE_URL: str = ""
+    TEST_DATABASE_URL: str = ""
 
     # Comma-separated list of frontend origins allowed to call the API
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
