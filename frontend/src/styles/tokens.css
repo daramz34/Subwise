@@ -1,0 +1,22 @@
+:root {
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-ui: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --step--1: .8125rem; --step-0: .9375rem; --step-1: 1.125rem; --step-2: 1.5rem;
+  --step-3: clamp(2rem, 4vw, 3rem); --step-4: clamp(2.6rem, 6.5vw, 5.25rem);
+  --r-sm: 3px; --r: 6px;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #F3F0E8; --surface: #FFFFFF; --raised: #EAE7DE;
+  --text: #191D18; --text-2: #62675C; --line: #DCDDD2;
+  --accent: #A8D94E; --accent-ink: #3C5612; --on-accent: #141714;
+  --danger: #B3361F; --danger-bg: #F6DDD6;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141714; --surface: #1D231E; --raised: #252C26;
+  --text: #F2F0E8; --text-2: #A4ACA0; --line: #343B34;
+  --accent: #C6F36B; --accent-ink: #C6F36B; --on-accent: #141714;
+  --danger: #FF9C84; --danger-bg: #3A1F1A;
+}

@@ -1,0 +1,38 @@
+.eyebrow { font: 500 .75rem/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 14px; }
+.spend { margin: 8px 0 56px; }
+.spend-row { display: flex; flex-wrap: wrap; gap: 12px 64px; }
+.spend-num { display: block; font: 400 clamp(3rem, 9vw, 6.5rem)/1 var(--font-display); color: var(--accent-ink); letter-spacing: -.02em; }
+.spend-sub { display: block; margin-top: 10px; color: var(--text-2); font-size: var(--step--1); }
+.note { margin-top: 18px; color: var(--text-2); font-size: var(--step--1); max-width: 60ch; }
+
+.dash-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 56px; margin-bottom: 56px; }
+.sec-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--text); padding-bottom: 10px; margin-bottom: 4px; }
+.sec-head h2 { font-size: var(--step-2); }
+.sec-head select { font: inherit; font-size: var(--step--1); color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); min-height: 36px; padding: 0 8px; }
+.timeline, .bars, .changes { list-style: none; margin: 0; padding: 0; }
+.dash-empty { color: var(--text-2); padding: 18px 0; }
+
+.timeline li { display: grid; grid-template-columns: 96px 1fr auto; gap: 16px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.tl-when { color: var(--text-2); font-size: var(--step--1); }
+.tl-soon .tl-when { color: var(--accent-ink); }
+.tl-name { font: 400 var(--step-1)/1.2 var(--font-display); overflow-wrap: anywhere; }
+.tl-name small { display: block; font-size: var(--step--1); color: var(--text-2); margin-top: 2px; }
+
+.bar-cur { margin: 16px 0 0; }
+.bars li { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.bar-top { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.bar-track { height: 6px; background: var(--raised); }
+.bar-fill { height: 100%; background: var(--accent); }
+
+.changes { margin-bottom: 56px; }
+.changes li { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.changes small { color: var(--text-2); font-size: var(--step--1); }
+.up { color: var(--danger); }
+.down { color: var(--accent-ink); }
+
+.nudge { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border: 1px solid var(--line); padding: 20px 24px; border-radius: var(--r); }
+
+@media (max-width: 899px) {
+  .dash-grid { grid-template-columns: 1fr; gap: 40px; }
+  .timeline li { grid-template-columns: 80px 1fr auto; }
+}
