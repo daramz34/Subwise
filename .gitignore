@@ -22,3 +22,6 @@ uploads/
 .DS_Store
 Thumbs.db
 frontend/node_modules
+api_contract.txt
+dump_api.py
+debug_*.py
