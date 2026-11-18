@@ -481,201 +481,58 @@ class AIExtractionResult(BaseModel):
 # ==========================================================================
 class CurrencyTotalOut(OutModel):
     currency: str
-    monthly: Decimal
-    yearly: Decimal
+    monthly: float      # numbers, not strings: the dashboard reads them as numbers
+    yearly: float
+    count: int
 
 
 class CategoryTotalOut(OutModel):
-    category_id: uuid.UUID | None
-    category_name: str
     currency: str
-    monthly: Decimal
+    category: str
+    monthly: float
 
 
 class UpcomingRenewalOut(OutModel):
-    subscription_id: uuid.UUID
+    subscription_id: str
     name: str
-    amount: Decimal
+    amount: float
     currency: str
     renewal_date: date
     days_until: int
+    status: str
 
 
 class OverviewOut(OutModel):
-    active_count: int
-    totals_by_currency: list[CurrencyTotalOut]  # never summed across currencies
+    as_of: date
+    subscription_count: int
+    totals: list[CurrencyTotalOut]        # one row per currency, never summed across currencies
     by_category: list[CategoryTotalOut]
     upcoming_renewals: list[UpcomingRenewalOut]
 
 
-class ForecastPointOut(OutModel):
-    month: str  # "2026-12"
-    currency: str
-    amount: Decimal
-
-
-class ForecastOut(OutModel):
-    months: int
-    points: list[ForecastPointOut]
-
-
 class PriceChangeOut(OutModel):
-    subscription_id: uuid.UUID
+    subscription_id: str
     name: str
     currency: str
-    old_amount: Decimal
-    new_amount: Decimal
-    change_amount: Decimal
-    change_percent: Decimal
+    old_amount: float
+    new_amount: float
+    change_percent: float
+    yearly_impact: float
     effective_date: date
-    yearly_impact: Decimal
-
-
-class InsightOut(OutModel):
-    id: uuid.UUID
-    subscription_id: uuid.UUID | None
-    insight_type: str
-    severity: str
-    title: str
-    description: str
-    potential_yearly_saving: Decimal | None
-    currency: str | None
-    supporting_data: dict[str, Any] | None
-    generated_at: datetime
-    dismissed: bool
-
-
 class AskIn(InModel):
-    question: str = Field(min_length=1, max_length=1000)
-    conversation_id: uuid.UUID | None = None
+    question: str = Field(min_length=3, max_length=500)
 
 
-class AIMessageOut(OutModel):
-    id: uuid.UUID
-    role: Literal["user", "assistant"]
-    content: str
-    citations: list[dict[str, Any]] | None
-    created_at: datetime
-
-
-class ProposedActionOut(OutModel):
-    id: uuid.UUID
-    subscription_id: uuid.UUID | None
-    action_type: str
-    payload: dict[str, Any]
-    status: str
-    created_at: datetime
-    resolved_at: datetime | None
+class CitationOut(OutModel):
+    ref: str                # "S1", "S2"...
+    subscription_id: str
+    name: str
 
 
 class AskOut(OutModel):
-    conversation_id: uuid.UUID
-    message: AIMessageOut
-    proposed_actions: list[ProposedActionOut] = []
-
-
-class ConversationOut(OutModel):
-    id: uuid.UUID
-    title: str | None
-    created_at: datetime
-    updated_at: datetime
-
-
-class ConversationDetailOut(ConversationOut):
-    messages: list[AIMessageOut]
-
-
-class ActionDecisionIn(InModel):
-    decision: Literal["approve", "reject"]
-
-
-# Internal: validates an action the AI proposes BEFORE it is stored. Allow-lists
-# what the AI may even suggest changing, so a prompt injection can't propose
-# changing amounts, currencies or ownership.
-AI_EDITABLE_FIELDS = {"next_renewal_date", "category_id", "notes"}
-
-
-class ProposedActionCreate(BaseModel):
-    action_type: Literal["pause_status", "cancel_status", "update_field", "set_reminder"]
-    subscription_id: uuid.UUID
-    payload: dict[str, Any] = Field(default_factory=dict)
-
-    @model_validator(mode="after")
-    def check_payload(self):
-        p = self.payload
-        if self.action_type in ("pause_status", "cancel_status"):
-            if p:
-                raise ValueError("status actions take no payload")
-        elif self.action_type == "update_field":
-            if set(p.keys()) - AI_EDITABLE_FIELDS or not p:
-                raise ValueError(f"update_field may only change: {sorted(AI_EDITABLE_FIELDS)}")
-        elif self.action_type == "set_reminder":
-            days = p.get("days_before")
-            if set(p.keys()) != {"days_before"} or not isinstance(days, int) or not 0 <= days <= 90:
-                raise ValueError("set_reminder needs days_before between 0 and 90")
-        return self
-
-
-class ReportOut(OutModel):
-    id: uuid.UUID
-    report_type: Literal["monthly", "wrapped"]
-    period_start: date
-    period_end: date
-    summary: str | None
-    content: dict[str, Any] | None
-    generated_at: datetime
-
-
-class HealthScoreOut(OutModel):
-    score: int = Field(ge=0, le=100)
-    factors: dict[str, Any] | None
-    calculated_at: datetime
-
-
-class BudgetCreate(InModel):
-    category_id: uuid.UUID | None = None  # null = overall budget
-    currency: CurrencyCode
-    monthly_limit: PositiveMoney
-    warn_at_percent: int = Field(default=80, ge=1, le=100)
-
-
-class BudgetUpdate(InModel):
-    monthly_limit: PositiveMoney | None = None
-    warn_at_percent: int | None = Field(default=None, ge=1, le=100)
-
-
-class BudgetOut(OutModel):
-    id: uuid.UUID
-    category_id: uuid.UUID | None
-    currency: str
-    monthly_limit: Decimal
-    warn_at_percent: int
-
-
-class BudgetStatusOut(OutModel):
-    budget: BudgetOut
-    spent: Decimal
-    percent_used: Decimal
-    state: Literal["ok", "warning", "exceeded"]
-
-
-class SavingsCreate(InModel):
-    subscription_id: uuid.UUID | None = None
-    subscription_name: str = Field(min_length=1, max_length=150)
-    yearly_saving: PositiveMoney
-    currency: CurrencyCode
-    reason: Literal["cancelled", "downgraded", "negotiated"]
-    occurred_on: date
-
-
-class SavingsOut(OutModel):
-    id: uuid.UUID
-    subscription_name: str
-    yearly_saving: Decimal
-    currency: str
-    reason: str
-    occurred_on: date
-
+    answer: str
+    citations: list[CitationOut]
+    note: str               # always shown in the UI
 
 # ==========================================================================
 # GROUP E: NOTIFICATIONS
@@ -691,6 +548,9 @@ class NotificationOut(OutModel):
     sent_at: datetime | None
     read_at: datetime | None
 
+class NotificationListOut(OutModel):
+    unread_count: int
+    items: list[NotificationOut]
 
 class NotificationPreferenceUpdate(InModel):
     renewal_days_before: list[Annotated[int, Field(ge=0, le=90)]] | None = Field(
@@ -727,43 +587,40 @@ class NotificationPreferenceOut(OutModel):
 class PlanOut(OutModel):
     code: str
     name: str
-    price: Decimal
+    price: str          # "5.00", formatted by the route
     currency: str
     duration_days: int | None
     limits: dict[str, Any]
-    is_active: bool
 
 
 class CreateOrderIn(InModel):
-    plan_code: Literal["plus"]  # the client names the plan; the SERVER decides the price
-    idempotency_key: str | None = Field(default=None, min_length=8, max_length=100)
+    plan_code: str = Field(min_length=1, max_length=20)  # client names the plan; the SERVER sets the price
 
 
 class CreateOrderOut(OutModel):
-    paypal_order_id: str
+    order_id: str
     status: str
-    approval_url: str | None = None
+    approve_url: str | None = None
 
 
 class CaptureOrderIn(InModel):
-    paypal_order_id: str = Field(min_length=1, max_length=100)
+    order_id: str = Field(min_length=5, max_length=64)
 
 
 class OrderOut(OutModel):
-    id: uuid.UUID
-    paypal_order_id: str
-    amount: Decimal
-    currency: str
+    order_id: str
     status: str
-    failure_reason: str | None
+    amount: str         # "5.00"
+    currency: str
     captured_at: datetime | None
-    refunded_at: datetime | None
-    created_at: datetime
+    failure_reason: str | None
+
+
+class CaptureOrderOut(OrderOut):
+    plan_code: str
 
 
 class EntitlementOut(OutModel):
-    plan: PlanOut
+    plan_code: str
     status: str
-    activated_at: datetime | None
     expires_at: datetime | None
-    revoked_at: datetime | None
